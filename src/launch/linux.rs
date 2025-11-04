@@ -2,11 +2,7 @@
 
 use super::{error::*, types::*};
 
-use std::{
-    cmp::min,
-    fs::File,
-    io::{Read, Seek},
-};
+use std::cmp::min;
 
 use nix::{ioctl_read, ioctl_readwrite, ioctl_write_ptr};
 
@@ -98,7 +94,7 @@ pub struct UserMemoryRegion {
 impl UserMemoryRegion {
     pub fn image_fill(
         &mut self,
-        image: &mut File,
+        image: &[u8],
         offset: usize,
         image_size: usize,
         written: &mut usize,
@@ -120,13 +116,14 @@ impl UserMemoryRegion {
                 image_size - image_offset,
             );
 
+            let (region_start, region_end) = (region_offset, region_offset + write_amount);
+            let (image_start, image_end) = (image_offset, image_offset + write_amount);
+
             let bytes = unsafe {
                 std::slice::from_raw_parts_mut(self.uaddr as *mut u8, self.size as usize)
             };
 
-            image
-                .read_exact(&mut bytes[region_offset..region_offset + write_amount])
-                .map_err(MemInitError::ImageRead)?;
+            bytes[region_start..region_end].copy_from_slice(&image[image_start..image_end]);
         }
 
         *written += self.size as usize;
@@ -195,9 +192,7 @@ impl UserMemoryRegions {
         let ImageType::Eif(image) = image;
 
         // Get the size of the enclave image.
-        let metadata = image.metadata().map_err(MemInitError::ImageMetadata)?;
-        let image_size = metadata.len() as usize;
-        image.rewind().map_err(MemInitError::ImageRewind)?;
+        let image_size = image.len();
 
         // Calculate the final index in guest memory in which the image should be written.
         let Some(limit) = offset.checked_add(image_size) else {

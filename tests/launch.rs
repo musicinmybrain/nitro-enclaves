@@ -13,7 +13,7 @@ use nix::{
     unistd::read,
 };
 use std::{
-    fs::File,
+    fs,
     io::{Read, Write},
     os::fd::{AsRawFd, RawFd},
 };
@@ -41,10 +41,10 @@ fn launch() {
     let mut launcher = Launcher::new(&device).unwrap();
 
     // Open the test EIF file.
-    let mut eif = File::open("tests/test_data/hello.eif").unwrap();
+    let mut eif = fs::read("tests/test_data/hello.eif").unwrap();
 
     // Set enclave memory with provided EIF file and 128 MiB of memory.
-    let mem = MemoryInfo::new(ImageType::Eif(&mut eif), ENCLAVE_VM_SIZE_MIB);
+    let mem = MemoryInfo::new(ImageType::Eif(&eif), ENCLAVE_VM_SIZE_MIB);
     launcher.set_memory(mem).unwrap();
 
     // Add one vCPU to the enclave.

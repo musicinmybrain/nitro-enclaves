@@ -9,7 +9,7 @@ use std::fs::File;
 #[derive(Debug)]
 pub enum ImageType<'a> {
     /// Enclave Image Format.
-    Eif(&'a mut File),
+    Eif(&'a [u8]),
 }
 
 /// Data related to setting enclave memory.

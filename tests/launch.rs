@@ -41,7 +41,7 @@ fn launch() {
     let mut launcher = Launcher::new(&device).unwrap();
 
     // Open the test EIF file.
-    let mut eif = fs::read("tests/test_data/hello.eif").unwrap();
+    let eif = fs::read("tests/test_data/hello.eif").unwrap();
 
     // Set enclave memory with provided EIF file and 128 MiB of memory.
     let mem = MemoryInfo::new(ImageType::Eif(&eif), ENCLAVE_VM_SIZE_MIB);
@@ -63,7 +63,7 @@ fn launch() {
 
     // Given the enclave image and amount of memory (in bytes), calculate the poll timeout for the
     // vsock listener.
-    let poll_timeout = PollTimeout::try_from((&eif, ENCLAVE_VM_SIZE_MIB << 20)).unwrap();
+    let poll_timeout = PollTimeout::try_from((eif.as_slice(), ENCLAVE_VM_SIZE_MIB << 20)).unwrap();
 
     // Verify the enclave kernel has booted (setting the vsock timeout to the value calculated in
     // poll_timeout).

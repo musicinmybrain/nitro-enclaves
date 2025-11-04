@@ -19,7 +19,7 @@ use std::{
 };
 use vsock::{VsockAddr, VsockListener};
 
-const ENCLAVE_VM_SIZE_MIB: usize = 1024;
+const ENCLAVE_VM_SIZE_MIB: usize = 2048;
 
 const ENCLAVE_READY_VSOCK_PORT: u32 = 9000;
 const CID_TO_CONSOLE_PORT_OFFSET: u32 = 10000;

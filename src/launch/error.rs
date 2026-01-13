@@ -34,7 +34,7 @@ pub enum LaunchError {
     MemInit(MemInitError),
 
     /// Error occuring when randomly-generating an enclave CID.
-    CidRandomGenerate,
+    CidInvalid,
 }
 
 impl LaunchError {
@@ -55,7 +55,7 @@ impl fmt::Display for LaunchError {
         let msg = match self {
             Self::Ioctl(e) => format!("ioctl error: {e}"),
             Self::MemInit(e) => format!("memory initialization error: {e}"),
-            Self::CidRandomGenerate => "unable to randomly-generate enclave CID".to_string(),
+            Self::CidInvalid => "the value of the provided CID is invalid".to_string(),
         };
 
         write!(f, "{}", msg)

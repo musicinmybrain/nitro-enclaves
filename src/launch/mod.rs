@@ -9,12 +9,10 @@ pub use types::*;
 
 use crate::device::Device;
 use linux::*;
-use rand::{rngs::OsRng, TryRngCore};
 use std::os::fd::{AsRawFd, RawFd};
+use vsock::VMADDR_CID_HOST;
 
 type Result<T> = std::result::Result<T, LaunchError>;
-
-const VMADDR_CID_PARENT: u32 = 3;
 
 /// Facilitates the execution of the nitro enclaves launch process.
 #[derive(Default)]
@@ -92,23 +90,21 @@ impl Launcher {
 
     /// Start running an enclave. Supply start flags and optional enclave CID. If successful, will
     /// return the actual enclave's CID (which may be different than the supplied CID).
-    pub fn start(&self, flags: StartFlags, cid: Option<u64>) -> Result<u64> {
-        let mut cid = cid.unwrap_or(0);
+    pub fn start(&self, flags: StartFlags, cid: Option<u32>) -> Result<u64> {
+        let cid = match cid {
+            Some(cid) => {
+                // Ensure that the provided CID is valid.
+                if cid <= VMADDR_CID_HOST || cid == u32::MAX {
+                    return Err(LaunchError::CidInvalid);
+                }
 
-        // Ensure that a valid CID is used. If the current CID is invalid, randomly-generate a
-        // valid one.
-        loop {
-            if cid > VMADDR_CID_PARENT as u64 && cid <= i32::MAX as u64 {
-                break;
+                cid
             }
-
-            cid = OsRng
-                .try_next_u32()
-                .map_err(|_| LaunchError::CidRandomGenerate)? as u64;
-        }
+            None => 0,
+        };
 
         // Start the enclave VM.
-        let mut start_info = StartInfo::new(flags, cid);
+        let mut start_info = StartInfo::new(flags, cid.into());
 
         unsafe { ne_start_enclave(self.vm_fd, &mut start_info) }?;
 

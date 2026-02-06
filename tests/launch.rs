@@ -32,6 +32,7 @@ const SO_VM_SOCKETS_CONNECT_TIMEOUT: i32 = 6;
 const HEART_BEAT: u8 = 0xb7;
 
 // Create and start a nitro enclave using the library API.
+#[cfg_attr(not(host), ignore)]
 #[test]
 fn launch() {
     // Open /dev/nitro_enclaves.

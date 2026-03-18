@@ -3,6 +3,7 @@
 use super::error::*;
 
 use bitflags::bitflags;
+use std::time::Duration;
 
 /// The image type of the enclave.
 #[derive(Debug)]
@@ -42,7 +43,7 @@ bitflags! {
 
 /// Calculate an enclave's poll timeout from its image size and the amount of memory allocated to
 /// it.
-pub struct PollTimeout(pub i32);
+pub struct PollTimeout(pub Duration);
 
 impl TryFrom<(&[u8], usize)> for PollTimeout {
     type Error = LaunchError;
@@ -51,15 +52,16 @@ impl TryFrom<(&[u8], usize)> for PollTimeout {
         let mul = 60 * 1000; // One minute in milliseconds.
         let size = args.0.len();
 
-        let file: i32 = ((1 + (size - 1) / (6 << 30)) as i32).saturating_mul(mul);
-        let alloc: i32 = ((1 + (args.1 - 1) / (100 << 30)) as i32).saturating_mul(mul);
+        let file: u64 = ((1 + (size - 1) / (6 << 30)) as u64).saturating_mul(mul);
+        let alloc: u64 = ((1 + (args.1 - 1) / (100 << 30)) as u64).saturating_mul(mul);
 
-        Ok(Self(file + alloc))
+        Ok(Self(Duration::from_millis(file + alloc)))
     }
 }
 
-impl From<PollTimeout> for i32 {
-    fn from(arg: PollTimeout) -> i32 {
-        arg.0
+impl PollTimeout {
+    /// Get the underlying std::time::Duration of the poll timeout.
+    pub fn duration(&self) -> Duration {
+        self.0
     }
 }

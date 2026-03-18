@@ -16,6 +16,7 @@ use std::{
     fs,
     io::{Read, Write},
     os::fd::{AsRawFd, RawFd},
+    time::Duration,
 };
 use vsock::{VsockAddr, VsockListener};
 
@@ -68,15 +69,15 @@ fn launch() {
 
     // Verify the enclave kernel has booted (setting the vsock timeout to the value calculated in
     // poll_timeout).
-    enclave_check(listener, poll_timeout.into(), cid);
+    enclave_check(listener, poll_timeout.duration(), cid);
 
     // The enclave was started in debug mode. Listen for debug output on a vsock for the enclave.
     listen(VMADDR_CID_HYPERVISOR, cid + CID_TO_CONSOLE_PORT_OFFSET);
 }
 
-pub fn enclave_check(listener: VsockListener, poll_timeout_ms: libc::c_int, cid: u32) {
+pub fn enclave_check(listener: VsockListener, duration: Duration, cid: u32) {
     let mut poll_fds = [PollFd::new(listener.as_raw_fd(), PollFlags::POLLIN)];
-    let result = poll(&mut poll_fds, poll_timeout_ms);
+    let result = poll(&mut poll_fds, duration);
     if result == Ok(0) {
         panic!("no pollfds have selected events");
     } else if result != Ok(1) {

@@ -15,7 +15,7 @@ use nix::{
 use std::{
     fs,
     io::{Read, Write},
-    os::fd::{AsRawFd, RawFd},
+    os::fd::{AsRawFd, BorrowedFd, RawFd},
     time::Duration,
 };
 use vsock::{VsockAddr, VsockListener};
@@ -76,8 +76,14 @@ fn launch() {
 }
 
 pub fn enclave_check(listener: VsockListener, duration: Duration, cid: u32) {
-    let mut poll_fds = [PollFd::new(listener.as_raw_fd(), PollFlags::POLLIN)];
-    let result = poll(&mut poll_fds, duration);
+    let mut poll_fds = unsafe {
+        [PollFd::new(
+            BorrowedFd::borrow_raw(listener.as_raw_fd()),
+            PollFlags::POLLIN,
+        )]
+    };
+    let poll_timeout = nix::poll::PollTimeout::try_from(duration).unwrap();
+    let result = poll(&mut poll_fds, poll_timeout);
     if result == Ok(0) {
         panic!("no pollfds have selected events");
     } else if result != Ok(1) {
@@ -114,10 +120,10 @@ fn listen(cid: u32, port: u32) {
     let sockaddr = NixVsockAddr::new(cid, port);
 
     // Set the vsock connection timeout.
-    vsock_timeout(socket_fd);
+    vsock_timeout(socket_fd.as_raw_fd());
 
     // Try to connect to the enclave.
-    connect(socket_fd, &sockaddr).unwrap();
+    connect(socket_fd.as_raw_fd(), &sockaddr).unwrap();
 
     // The testing EIF image prints Linux boot logs as debug output. One such message contains:
     //
@@ -129,7 +135,7 @@ fn listen(cid: u32, port: u32) {
     let mut buf = [0u8; 512];
     loop {
         // Read debug output from vsock.
-        let ret = read(socket_fd, &mut buf);
+        let ret = read(&socket_fd, &mut buf);
         let Ok(sz) = ret else {
             break;
         };
